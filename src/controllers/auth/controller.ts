@@ -1,10 +1,10 @@
-import {Request, Response} from 'express';
-import routes from '../../routes/v1';
-import authService from './service';
-import asyncHandler from '../../modules/AsyncHandler';
+import { Request, Response } from "express";
+import routes from "../../routes/v1";
+import authService from "./service";
+import asyncHandler from "../../modules/AsyncHandler";
 
 routes.post(
-  '/auth/signin',
+  "/auth/signin",
   asyncHandler(async (req: Request, res: Response) => {
     const formData = req.body;
 
@@ -15,7 +15,7 @@ routes.post(
 );
 
 routes.post(
-  '/auth/signup',
+  "/auth/signup",
   asyncHandler(async (req: Request, res: Response) => {
     const formData = req.body;
 
