@@ -4,18 +4,24 @@ import { swaggerDocument } from '../config/swagger';
 
 const router = express.Router();
 
-// PERBAIKAN UTAMA: Gunakan CSS dari CDN agar tidak blank di Vercel
-const CSS_URL =
-  'https://cdnjs.cloudflare.com/ajax/libs/swagger-ui/4.1.0/swagger-ui.min.css';
+// Gunakan versi CDN yang stabil (v5.0.0 sesuai dengan swagger-ui-express kamu)
+const CDN_CSS =
+  'https://cdnjs.cloudflare.com/ajax/libs/swagger-ui/5.0.0/swagger-ui.min.css';
+const CDN_BUNDLE =
+  'https://cdnjs.cloudflare.com/ajax/libs/swagger-ui/5.0.0/swagger-ui-bundle.min.js';
+const CDN_PRESET =
+  'https://cdnjs.cloudflare.com/ajax/libs/swagger-ui/5.0.0/swagger-ui-standalone-preset.min.js';
 
 router.use(
   '/docs',
   swaggerUi.serve,
   swaggerUi.setup(swaggerDocument, {
-    customCssUrl: CSS_URL, // Load CSS dari internet
+    customCssUrl: CDN_CSS,
+    // Kita inject JS manual lewat customJs
+    customJs: [CDN_BUNDLE, CDN_PRESET],
     customSiteTitle: 'Pandai LMS Docs',
     swaggerOptions: {
-      persistAuthorization: true, // Token tidak hilang saat refresh page
+      persistAuthorization: true,
     },
   })
 );
