@@ -1,15 +1,16 @@
-import cors, {CorsOptions} from 'cors';
-import express, {type Express} from 'express';
+import cors, { CorsOptions } from 'cors';
+import express, { type Express } from 'express';
 import helmet from 'helmet';
-import {pino} from 'pino';
+import { pino } from 'pino';
 
 import errorHandler from './common/middleware/errorHandler';
 import rateLimiter from './common/middleware/rateLimiter';
 import requestLogger from './common/middleware/requestLogger';
 import indexRouter from './routes/index';
+import docsRouter from './routes/docs';
 import path from 'path';
 
-const logger = pino({name: 'server start'});
+const logger = pino({ name: 'server start' });
 const app: Express = express();
 
 const allowedOrigins = [
@@ -45,7 +46,7 @@ app.set('trust proxy', true);
 // Middlewares
 app.use(cors(corsOptions));
 app.use(express.json());
-app.use(express.urlencoded({extended: true}));
+app.use(express.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname, '/../public')));
 app.use(helmet());
 app.use(rateLimiter);
@@ -58,8 +59,9 @@ app.use(requestLogger);
 // app.use('/users', userRouter);
 // app.use('/auth', authRouter);
 app.use(indexRouter);
+app.use(docsRouter);
 
 // Error handlers
 app.use(errorHandler());
 
-export {app, logger};
+export { app, logger };

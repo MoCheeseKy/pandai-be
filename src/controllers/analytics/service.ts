@@ -12,7 +12,7 @@ class AnalyticsService {
   // 1. SENTIMEN (FEEDBACK SISWA)
   // ======================================================
   async submitSentiment(userId: string, data: any) {
-    // Cek duplikasi: Satu siswa hanya boleh kasih 1 feedback per materi
+    // ID unik kombinasi userId_materialId agar 1 siswa hanya isi 1x per materi
     const id = `${userId}_${data.materialId}`;
 
     await this.sentimentsRef.doc(id).set({
@@ -29,7 +29,6 @@ class AnalyticsService {
   }
 
   async getMaterialSentiments(materialId: string) {
-    // Hitung statistik sentimen untuk Guru
     const snapshot = await this.sentimentsRef
       .where('materialId', '==', materialId)
       .get();
@@ -49,16 +48,15 @@ class AnalyticsService {
 
     return ServiceResponse.success('Analisa Sentimen', {
       totalResponses: total,
-      helpfulPercentage: percentage, // Misal: 80% siswa merasa terbantu
-      comments, // Daftar komentar anonim
+      helpfulPercentage: percentage,
+      comments, // Feedback teks dari siswa
     });
   }
 
   // ======================================================
-  // 2. STATISTIK KELAS (UNTUK GURU & WAKA)
+  // 2. STATISTIK KELAS (DASHBOARD GURU)
   // ======================================================
   async getClassPerformance(courseId: string) {
-    // Ambil semua submission di course ini yang sudah dinilai (GRADED)
     const snapshot = await this.submissionsRef
       .where('courseId', '==', courseId)
       .where('status', '==', 'GRADED')
@@ -74,10 +72,9 @@ class AnalyticsService {
 
     let totalScore = 0;
     let studentCount = 0;
-    let passedCount = 0; // Siswa yang paham (Nilai >= 70)
+    let passedCount = 0;
 
-    // Grouping nilai per materi untuk melihat trend (Kenaikan/Penurunan)
-    // Map<MaterialID, AverageScore>
+    // Grouping nilai per materi untuk tren
     const materialScores: Record<string, { total: number; count: number }> = {};
 
     snapshot.forEach((doc) => {
@@ -85,9 +82,8 @@ class AnalyticsService {
       totalScore += d.score;
       studentCount++;
 
-      if (d.score >= 70) passedCount++; // KKM asumsi 70
+      if (d.score >= 70) passedCount++; // Anggap KKM 70
 
-      // Masukkan ke grouping materi
       if (!materialScores[d.materialId]) {
         materialScores[d.materialId] = { total: 0, count: 0 };
       }
@@ -98,14 +94,12 @@ class AnalyticsService {
     const averageScore = Math.round(totalScore / studentCount);
     const understandingRatio = Math.round((passedCount / studentCount) * 100);
 
-    // Hitung Trend (Bandingkan 2 materi terakhir)
-    // Note: Ini penyederhanaan. Idealnya kita sort material by date dulu.
+    // Hitung Trend (Sederhana: Bandingkan 2 data terakhir di map)
     const materialKeys = Object.keys(materialScores);
-    let trend = 'Data belum cukup untuk tren';
+    let trend = 'Data belum cukup';
     let trendPercentage = 0;
 
     if (materialKeys.length >= 2) {
-      // Ambil 2 materi acak (karena object keys un-ordered, di production harus query materials sort by date)
       const mat1 = materialScores[materialKeys[materialKeys.length - 2]];
       const mat2 = materialScores[materialKeys[materialKeys.length - 1]];
 
@@ -122,18 +116,17 @@ class AnalyticsService {
 
     return ServiceResponse.success('Performa Kelas', {
       averageScore,
-      understandingRatio, // % Siswa Paham
+      understandingRatio,
       totalSubmissions: studentCount,
-      trend, // String: "Naik 10 poin"
-      trendPercentage, // Number: 10 atau -10
+      trend,
+      trendPercentage,
     });
   }
 
   // ======================================================
-  // 3. RAPOR SISWA (UNTUK ORTU & SISWA)
+  // 3. RAPOR SISWA (DETAIL NILAI)
   // ======================================================
   async getStudentReport(userId: string, courseId: string) {
-    // Ambil nilai siswa ini
     const mySubmissions = await this.submissionsRef
       .where('userId', '==', userId)
       .where('courseId', '==', courseId)
@@ -160,18 +153,105 @@ class AnalyticsService {
 
     const average = Math.round(totalScore / count);
 
-    // Feedback otomatis sederhana
-    let feedback = 'Pertahankan prestasimu!';
-    if (average < 70) feedback = 'Perlu peningkatan belajar, jangan menyerah!';
-    if (average > 90)
-      feedback = 'Luar biasa! Kamu sangat menguasai pelajaran ini.';
+    let feedback = 'Pertahankan!';
+    if (average < 70) feedback = 'Perlu peningkatan, ayo belajar lagi!';
+    if (average > 90) feedback = 'Luar biasa! Pertahankan prestasimu.';
 
     return ServiceResponse.success('Laporan Belajar Siswa', {
       studentId: userId,
       averageScore: average,
       completedTasks: count,
-      feedback, // Feedback otomatis
-      history, // Riwayat nilai untuk grafik frontend
+      feedback,
+      history,
+    });
+  }
+
+  // ======================================================
+  // 4. REKOMENDASI BELAJAR (DASHBOARD HOME MURID)
+  // ======================================================
+  async getStudyRecommendations(userId: string) {
+    const snapshot = await this.submissionsRef
+      .where('userId', '==', userId)
+      .where('status', '==', 'GRADED')
+      .get();
+
+    if (snapshot.empty) {
+      return ServiceResponse.success('Belum ada data rekomendasi', []);
+    }
+
+    const courseScores: Record<string, { total: number; count: number }> = {};
+
+    snapshot.forEach((doc) => {
+      const d = doc.data();
+      if (d.courseId) {
+        if (!courseScores[d.courseId]) {
+          courseScores[d.courseId] = { total: 0, count: 0 };
+        }
+        courseScores[d.courseId].total += d.score;
+        courseScores[d.courseId].count++;
+      }
+    });
+
+    const recommendations: any[] = [];
+
+    for (const [courseId, stats] of Object.entries(courseScores)) {
+      const avg = Math.round(stats.total / stats.count);
+      // Jika rata-rata di bawah 75, masuk rekomendasi
+      if (avg < 75) {
+        recommendations.push({
+          courseId,
+          reason: 'Nilai rata-rata masih rendah',
+          currentAverage: avg,
+          priority: 'HIGH',
+        });
+      }
+    }
+
+    // Urutkan dari nilai terendah
+    recommendations.sort((a, b) => a.currentAverage - b.currentAverage);
+
+    return ServiceResponse.success('Rekomendasi Belajar', recommendations);
+  }
+
+  // ======================================================
+  // 5. PROGRESS HARIAN (DASHBOARD HOME MURID)
+  // ======================================================
+  async getDailyProgress(userId: string) {
+    const startOfDay = new Date();
+    startOfDay.setHours(0, 0, 0, 0);
+
+    const endOfDay = new Date();
+    endOfDay.setHours(23, 59, 59, 999);
+
+    const snapshot = await this.submissionsRef
+      .where('userId', '==', userId)
+      .where('submittedAt', '>=', startOfDay)
+      .where('submittedAt', '<=', endOfDay)
+      .get();
+
+    let completedCount = 0;
+    let quizScoreTotal = 0;
+    let quizCount = 0;
+
+    snapshot.forEach((doc) => {
+      const d = doc.data();
+      completedCount++;
+      if (d.type === 'QUIZ' && d.status === 'GRADED') {
+        quizScoreTotal += d.score;
+        quizCount++;
+      }
+    });
+
+    const avgQuiz = quizCount > 0 ? Math.round(quizScoreTotal / quizCount) : 0;
+
+    return ServiceResponse.success('Progress Hari Ini', {
+      date: new Date(),
+      totalActivities: completedCount,
+      averageQuizScore: avgQuiz,
+      message:
+        completedCount > 0
+          ? `Hebat! ${completedCount} aktivitas selesai hari ini.`
+          : 'Belum ada aktivitas hari ini. Yuk mulai belajar!',
     });
   }
 }
