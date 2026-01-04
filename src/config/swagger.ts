@@ -10,10 +10,11 @@ export const swaggerDocument = {
       name: 'Tim Pengembang',
     },
   },
+  // PERBAIKAN UTAMA: Gunakan url "/" (relative) agar otomatis ikut HTTPS Vercel
   servers: [
     {
-      url: `http://${env.HOST}:${env.PORT}`,
-      description: 'Development Server',
+      url: '/',
+      description: 'Current Server',
     },
   ],
   components: {
@@ -23,9 +24,6 @@ export const swaggerDocument = {
         scheme: 'bearer',
         bearerFormat: 'JWT',
       },
-    },
-    schemas: {
-      // Schema umum bisa ditaruh sini
     },
   },
   security: [
