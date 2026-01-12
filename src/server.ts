@@ -1,63 +1,56 @@
-import cors, { CorsOptions } from "cors";
-import express, { type Express } from "express";
-import helmet from "helmet";
-import { pino } from "pino";
+import cors from 'cors';
+import express, { type Express } from 'express';
+import helmet from 'helmet';
+import { pino } from 'pino';
 
-import errorHandler from "./common/middleware/errorHandler";
-import rateLimiter from "./common/middleware/rateLimiter";
-import requestLogger from "./common/middleware/requestLogger";
-import indexRouter from "./routes/index";
-import path from "path";
+import errorHandler from './common/middleware/errorHandler';
+import rateLimiter from './common/middleware/rateLimiter';
+import requestLogger from './common/middleware/requestLogger';
+import { env } from './common/utils/envConfig';
+import routes from './routes/v1';
+import docsRouter from './routes/docs';
 
-const logger = pino({ name: "server start" });
+const logger = pino({ name: 'server start' });
 const app: Express = express();
 
-const allowedOrigins = [
-  "http://localhost:3000",
-  "http://localhost:5173",
-  "https://jernih-us.vercel.app",
-];
-
-const corsOptions: CorsOptions = {
-  origin: (
-    origin: string | undefined,
-    callback: (err: Error | null, allow?: boolean) => void
-  ) => {
-    if (!origin || allowedOrigins.includes(origin)) {
-      callback(null, true);
-    } else {
-      callback(new Error("This origin is not allowed"));
-    }
-  },
-
-  credentials: true,
-
-  methods: "GET,HEAD,PUT,PATCH,POST,DELETE",
-
-  allowedHeaders: "Content-Type, Authorization",
-
-  optionsSuccessStatus: 204,
-};
-
-// Set the application to trust the reverse proxy
-app.set("trust proxy", true);
+app.set('trust proxy', true);
 
 // Middlewares
-app.use(cors(corsOptions));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-app.use(express.static(path.join(__dirname, "/../public")));
-app.use(helmet());
-app.use(rateLimiter);
+app.use(cors({ origin: env.CORS_ORIGIN, credentials: true }));
 
-// Request logging
+app.use(
+  helmet({
+    contentSecurityPolicy: {
+      directives: {
+        ...helmet.contentSecurityPolicy.getDefaultDirectives(),
+        'script-src': [
+          "'self'",
+          "'unsafe-inline'",
+          'cdnjs.cloudflare.com',
+          'vercel.live',
+        ],
+        'img-src': ["'self'", 'data:', 'blob:', 'validator.swagger.io'],
+        'style-src': [
+          "'self'",
+          "'unsafe-inline'",
+          'cdnjs.cloudflare.com',
+          'fonts.googleapis.com',
+        ],
+        'connect-src': ["'self'", 'vercel.live'],
+      },
+    },
+    crossOriginResourcePolicy: false,
+  })
+);
+
+app.use(rateLimiter);
 app.use(requestLogger);
 
 // Routes
-// app.use('/health-check', healthCheckRouter);
-// app.use('/users', userRouter);
-// app.use('/auth', authRouter);
-app.use("/api/v1", indexRouter);
+app.use(routes); // Router V1 Aplikasi
+app.use(docsRouter); // Router Swagger Docs
 
 // Error handlers
 app.use(errorHandler());

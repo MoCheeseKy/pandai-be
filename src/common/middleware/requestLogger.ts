@@ -1,14 +1,15 @@
-import {randomUUID} from 'node:crypto';
-import type {NextFunction, Request, Response} from 'express';
-import {StatusCodes} from 'http-status-codes';
+import { randomUUID } from 'node:crypto';
+import type { NextFunction, Request, Response } from 'express';
+import { StatusCodes } from 'http-status-codes';
 import pino from 'pino';
 import pinoHttp from 'pino-http';
 
-import {env} from '../utils/envConfig';
+import { env } from '../utils/envConfig';
 
 const logger = pino({
-  level: env.isProduction ? 'info' : 'debug',
-  transport: env.isProduction ? undefined : {target: 'pino-pretty'},
+  // Kita paksa level 'info' dan HAPUS transport 'pino-pretty'
+  // agar tidak crash di Vercel karena missing dependency.
+  level: 'info',
 });
 
 const getLogLevel = (status: number) => {

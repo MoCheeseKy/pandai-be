@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 import express, { Router } from "express";
 import {signIn, signUp} from '../controllers/auth/controller';
 
@@ -9,6 +10,9 @@ import {
   getNilaiSiswa,
   mustEvaluate,
 } from "../controllers/siswa/controller";
+=======
+import express, { Router } from 'express';
+>>>>>>> 76d9595deb114a25c0406f24380513218ebb9455
 
 const routes: Router = express.Router();
 /* ===== AUTH ===== */
@@ -24,3 +28,13 @@ routes.get("/get-nilai/siswa", getNilaiSiswa);
 routes.get("/get-nilai/siswa/must-evaluate", mustEvaluate);
 
 export default routes;
+<<<<<<< HEAD
+=======
+require('../controllers/auth/controller');
+require('../controllers/posts/controller');
+require('../controllers/user-profile/controller');
+require('../controllers/academics/controller');
+require('../controllers/materials/controller');
+require('../controllers/submissions/controller');
+require('../controllers/analytics/controller');
+>>>>>>> 76d9595deb114a25c0406f24380513218ebb9455
