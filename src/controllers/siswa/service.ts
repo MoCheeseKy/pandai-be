@@ -6,6 +6,14 @@ class SiswaService {
   private usersRef = db.collection("users");
 
   /* =========================
+     HELPER: HITUNG PROGRESS (%)
+     ========================= */
+  private hitungProgress(prev: number, curr: number): number | null {
+    if (!prev || prev === 0) return null;
+    return Math.round(((curr - prev) / prev) * 100 * 100) / 100;
+  }
+
+  /* =========================
      GET SEMUA SISWA
      ========================= */
   async getAll() {
@@ -66,6 +74,7 @@ class SiswaService {
 
   /* =========================
      INPUT NILAI QUIZ / MINIGAME
+     + PROGRESS (%)
      ========================= */
   async storeNilai(
     nis: string,
@@ -73,7 +82,6 @@ class SiswaService {
     nilai: number,
     type: "quiz" | "minigame"
   ) {
-    // VALIDASI
     if (!nis || bab === undefined || nilai === undefined || !type) {
       return ServiceResponse.failure(
         "Invalid input data",
@@ -101,27 +109,35 @@ class SiswaService {
 
     const dataNilaiAwal = Array.isArray(data.dataNilai) ? data.dataNilai : [];
 
-    const dataNilai = dataNilaiAwal.map((item: any) => {
-      if (item.bab === bab) {
-        // 🔑 PAKSA NULL → 0
-        const quizAwal = item.nilaiQuiz ?? 0;
-        const minigameAwal = item.nilaiMinigame ?? 0;
+    const dataNilai = dataNilaiAwal.map(
+      (item: any, index: number, arr: any[]) => {
+        if (item.bab === bab) {
+          const quizAwal = item.nilaiQuiz ?? 0;
+          const minigameAwal = item.nilaiMinigame ?? 0;
 
-        const nilaiQuiz = type === "quiz" ? nilai : quizAwal;
+          const nilaiQuiz = type === "quiz" ? nilai : quizAwal;
+          const nilaiMinigame = type === "minigame" ? nilai : minigameAwal;
 
-        const nilaiMinigame = type === "minigame" ? nilai : minigameAwal;
+          // 🔑 NILAI QUIZ BAB SEBELUMNYA
+          const prevQuiz = arr[index - 1]?.nilaiQuiz ?? 0;
 
-        return {
-          ...item,
-          nilaiQuiz,
-          nilaiMinigame,
-          // 🔑 TOTAL = RATA-RATA
-          nilaiTotal: Math.round((nilaiQuiz + nilaiMinigame) / 2),
-        };
+          const progressQuiz =
+            type === "quiz"
+              ? this.hitungProgress(prevQuiz, nilaiQuiz)
+              : item.progressQuiz ?? null;
+
+          return {
+            ...item,
+            nilaiQuiz,
+            nilaiMinigame,
+            nilaiTotal: Math.round((nilaiQuiz + nilaiMinigame) / 2),
+            progressQuiz, // 🔥 NAIK / TURUN (%)
+          };
+        }
+
+        return item;
       }
-
-      return item;
-    });
+    );
 
     const nilaiValid = dataNilai.filter(
       (i: any) => typeof i.nilaiTotal === "number"
