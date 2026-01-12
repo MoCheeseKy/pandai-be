@@ -1,26 +1,13 @@
 import { Request, Response } from "express";
-import routes from "../../routes/v1";
-import authService from "./service";
 import asyncHandler from "../../modules/AsyncHandler";
+import authService from "./service";
 
-routes.post(
-  "/auth/signin",
-  asyncHandler(async (req: Request, res: Response) => {
-    const formData = req.body;
+export const signIn = asyncHandler(async (req: Request, res: Response) => {
+  const serviceResponse = await authService.signIn(req.body);
+  res.status(serviceResponse.statusCode).json(serviceResponse);
+});
 
-    const serviceResponse = await authService.signIn(formData);
-
-    res.status(serviceResponse.statusCode).json(serviceResponse);
-  })
-);
-
-routes.post(
-  "/auth/signup",
-  asyncHandler(async (req: Request, res: Response) => {
-    const formData = req.body;
-
-    const serviceResponse = await authService.signUp(formData);
-
-    res.status(serviceResponse.statusCode).json(serviceResponse);
-  })
-);
+export const signUp = asyncHandler(async (req: Request, res: Response) => {
+  const serviceResponse = await authService.signUp(req.body);
+  res.status(serviceResponse.statusCode).json(serviceResponse);
+});

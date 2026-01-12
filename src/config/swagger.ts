@@ -5,32 +5,16 @@ export const swaggerDocument = {
   info: {
     title: 'Pandai LMS API',
     version: '1.0.0',
-    description: 'Dokumentasi API untuk Learning Management System Pandai',
-    contact: {
-      name: 'Tim Pengembang',
-    },
+    description: 'Dokumentasi API lengkap untuk Learning Management System Pandai',
+    contact: { name: 'Tim Pengembang' },
   },
-  // PERBAIKAN UTAMA: Gunakan url "/" (relative) agar otomatis ikut HTTPS Vercel
-  servers: [
-    {
-      url: '/',
-      description: 'Current Server',
-    },
-  ],
+  servers: [{ url: '/', description: 'Current Server' }],
   components: {
     securitySchemes: {
-      bearerAuth: {
-        type: 'http',
-        scheme: 'bearer',
-        bearerFormat: 'JWT',
-      },
+      bearerAuth: { type: 'http', scheme: 'bearer', bearerFormat: 'JWT' },
     },
   },
-  security: [
-    {
-      bearerAuth: [],
-    },
-  ],
+  security: [{ bearerAuth: [] }],
   paths: {
     // ==========================
     // AUTHENTICATION
@@ -39,7 +23,7 @@ export const swaggerDocument = {
       post: {
         tags: ['Auth'],
         summary: 'Login Pengguna',
-        security: [], // Public endpoint
+        security: [],
         requestBody: {
           required: true,
           content: {
@@ -47,156 +31,214 @@ export const swaggerDocument = {
               schema: {
                 type: 'object',
                 properties: {
-                  email: { type: 'string', example: 'siswa@sekolah.id' },
-                  password: { type: 'string', example: 'rahasia123' },
+                  email: { type: 'string', example: 'user@sekolah.id' },
+                  password: { type: 'string', example: 'password123' },
                 },
               },
             },
           },
         },
-        responses: {
-          200: { description: 'Login berhasil, mengembalikan Token' },
-        },
+        responses: { 200: { description: 'Login berhasil' } },
       },
     },
-
-    // ==========================
-    // USER PROFILE
-    // ==========================
-    '/profile/me': {
-      get: {
-        tags: ['Profile'],
-        summary: 'Get Profile Saya',
-        responses: {
-          200: { description: 'Data profile ditemukan' },
-        },
-      },
-    },
-    '/profile/student': {
-      put: {
-        tags: ['Profile'],
-        summary: 'Update Profile Murid',
+    '/auth/signup': {
+      post: {
+        tags: ['Auth'],
+        summary: 'Registrasi Pengguna Baru',
+        security: [],
         requestBody: {
+          required: true,
           content: {
             'application/json': {
               schema: {
                 type: 'object',
                 properties: {
-                  nis: { type: 'string' },
-                  nisn: { type: 'string' },
-                  classId: { type: 'string' },
-                  parentPhone: { type: 'string' },
+                  email: { type: 'string' },
+                  password: { type: 'string' },
+                  fullName: { type: 'string' },
+                  role: { type: 'string', enum: ['murid', 'guru', 'orang_tua', 'waka'] },
                 },
               },
             },
           },
         },
-        responses: {
-          200: { description: 'Profile berhasil diupdate' },
+        responses: { 201: { description: 'Registrasi berhasil' } },
+      },
+    },
+
+    // ==========================
+    // POSTS (BERITA/ARTIKEL)
+    // ==========================
+    '/posts': {
+      get: {
+        tags: ['Posts'],
+        summary: 'Ambil semua postingan',
+        responses: { 200: { description: 'Daftar postingan' } },
+      },
+      post: {
+        tags: ['Posts'],
+        summary: 'Buat postingan baru (Guru/Waka)',
+        requestBody: {
+          content: {
+            'multipart/form-data': {
+              schema: {
+                type: 'object',
+                properties: {
+                  title: { type: 'string' },
+                  content: { type: 'string' },
+                  banner: { type: 'string', format: 'binary' },
+                  documentations: { type: 'array', items: { type: 'string', format: 'binary' } },
+                },
+              },
+            },
+          },
         },
+        responses: { 201: { description: 'Post created' } },
       },
     },
 
     // ==========================
     // ACADEMICS
     // ==========================
-    '/academics/courses/me': {
+    '/academics/subjects': {
       get: {
         tags: ['Academics'],
-        summary: 'Lihat Jadwal Pelajaran Saya',
-        description:
-          'Otomatis mendeteksi role. Murid melihat mapel kelasnya, Guru melihat jadwal mengajarnya.',
-        responses: {
-          200: { description: 'List Jadwal Pelajaran' },
-        },
+        summary: 'List semua mata pelajaran',
+        responses: { 200: { description: 'OK' } },
+      },
+      post: {
+        tags: ['Academics'],
+        summary: 'Tambah mata pelajaran baru',
+        responses: { 201: { description: 'Created' } },
       },
     },
     '/academics/classes': {
       get: {
         tags: ['Academics'],
-        summary: 'List Semua Kelas',
-        description: 'Digunakan untuk dropdown saat registrasi/update profile',
-        responses: {
-          200: { description: 'List Kelas' },
-        },
+        summary: 'List semua kelas',
+        responses: { 200: { description: 'OK' } },
+      },
+    },
+    '/academics/courses/me': {
+      get: {
+        tags: ['Academics'],
+        summary: 'Lihat jadwal saya (Berdasarkan Role)',
+        responses: { 200: { description: 'Jadwal ditemukan' } },
       },
     },
 
     // ==========================
-    // MATERIALS
+    // MATERIALS & CHAPTERS
     // ==========================
     '/materials/chapters/{courseId}': {
       get: {
         tags: ['Materials'],
         summary: 'List Bab dalam Mapel',
-        parameters: [
-          {
-            name: 'courseId',
-            in: 'path',
-            required: true,
-            schema: { type: 'string' },
-          },
-        ],
-        responses: {
-          200: { description: 'List Bab' },
-        },
+        parameters: [{ name: 'courseId', in: 'path', required: true, schema: { type: 'string' } }],
+        responses: { 200: { description: 'OK' } },
       },
     },
-    '/materials/by-chapter/{chapterId}': {
-      get: {
+    '/materials': {
+      post: {
         tags: ['Materials'],
-        summary: 'List Materi dalam Bab',
-        parameters: [
-          {
-            name: 'chapterId',
-            in: 'path',
-            required: true,
-            schema: { type: 'string' },
+        summary: 'Upload materi baru (Guru)',
+        requestBody: {
+          content: {
+            'multipart/form-data': {
+              schema: {
+                type: 'object',
+                properties: {
+                  chapterId: { type: 'string' },
+                  title: { type: 'string' },
+                  type: { type: 'string', enum: ['VIDEO', 'DOCUMENT', 'QUIZ'] },
+                  attachment: { type: 'string', format: 'binary' },
+                },
+              },
+            },
           },
-        ],
-        responses: {
-          200: { description: 'List Materi (Video, PPT, Quiz)' },
         },
+        responses: { 201: { description: 'Material uploaded' } },
       },
     },
 
     // ==========================
-    // ANALYTICS & DASHBOARD
+    // SUBMISSIONS & GRADING
     // ==========================
-    '/analytics/student/daily-progress': {
-      get: {
-        tags: ['Analytics - Student'],
-        summary: 'Progress Harian Murid',
-        responses: {
-          200: { description: 'Statistik aktivitas hari ini' },
-        },
-      },
-    },
-    '/analytics/student/recommendations': {
-      get: {
-        tags: ['Analytics - Student'],
-        summary: 'Rekomendasi Belajar',
-        description: 'Mapel dengan nilai terendah yang perlu ditingkatkan',
-        responses: {
-          200: { description: 'List rekomendasi' },
-        },
-      },
-    },
-    '/analytics/teacher/course/{courseId}': {
-      get: {
-        tags: ['Analytics - Teacher'],
-        summary: 'Statistik Performa Kelas',
-        parameters: [
-          {
-            name: 'courseId',
-            in: 'path',
-            required: true,
-            schema: { type: 'string' },
+    '/submissions': {
+      post: {
+        tags: ['Submissions'],
+        summary: 'Siswa mengumpulkan tugas/kuis',
+        requestBody: {
+          content: {
+            'multipart/form-data': {
+              schema: {
+                type: 'object',
+                properties: {
+                  materialId: { type: 'string' },
+                  file: { type: 'string', format: 'binary' },
+                  answerData: { type: 'string', description: 'JSON string untuk kuis' },
+                },
+              },
+            },
           },
-        ],
-        responses: {
-          200: { description: 'Rata-rata nilai, Rasio pemahaman, Tren' },
         },
+        responses: { 201: { description: 'Submitted' } },
+      },
+    },
+    '/submissions/grade/{submissionId}': {
+      put: {
+        tags: ['Submissions'],
+        summary: 'Guru memberi nilai',
+        parameters: [{ name: 'submissionId', in: 'path', required: true, schema: { type: { type: 'string' } } }],
+        requestBody: {
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  score: { type: 'number' },
+                  feedback: { type: 'string' },
+                },
+              },
+            },
+          },
+        },
+        responses: { 200: { description: 'Graded' } },
+      },
+    },
+
+    // ==========================
+    // ANALYTICS
+    // ==========================
+    '/analytics/student/report/{courseId}': {
+      get: {
+        tags: ['Analytics'],
+        summary: 'Ambil rapor nilai per mapel',
+        parameters: [
+          { name: 'courseId', in: 'path', required: true, schema: { type: 'string' } },
+          { name: 'studentId', in: 'query', schema: { type: 'string' }, description: 'Wajib jika role Orang Tua' },
+        ],
+        responses: { 200: { description: 'Data rapor' } },
+      },
+    },
+    '/analytics/sentiment': {
+      post: {
+        tags: ['Analytics'],
+        summary: 'Submit feedback emosional siswa terhadap materi',
+        requestBody: {
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  materialId: { type: 'string' },
+                  sentiment: { type: 'string', enum: ['HAPPY', 'NEUTRAL', 'SAD'] },
+                },
+              },
+            },
+          },
+        },
+        responses: { 200: { description: 'Sentiment recorded' } },
       },
     },
   },
